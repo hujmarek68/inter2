@@ -9,7 +9,7 @@
         body { font-family: Arial; padding: 20px; background: #eee; }
         .box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
         input, textarea { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
-        button { background: #003366; color: white; padding: 10px; cursor: pointer; border: none; width: 100%; }
+        button { background: #003366; color: white; padding: 10px; cursor: pointer; border: none; width: 100%; margin-top: 10px; }
         .card { background: white; padding: 10px; margin-top: 5px; border-bottom: 1px solid #ccc; }
     </style>
 </head>
@@ -22,6 +22,12 @@
         <textarea id="desc" placeholder="Opis"></textarea>
         <input type="file" id="fileInput">
         <button id="addBtn">DODAJ DO BAZY</button>
+    </div>
+
+    <div class="box">
+        <h2>DODAJ MEDIA</h2>
+        <input type="file" id="mediaFileInput">
+        <button id="addMediaBtn">DODAJ MEDIA</button>
     </div>
 
     <div class="box">
@@ -40,6 +46,7 @@
 
         let allItems = [];
 
+        // Dodawanie osoby
         document.getElementById('addBtn').addEventListener('click', async () => {
             const file = document.getElementById('fileInput').files[0];
             let imgUrl = "";
@@ -62,7 +69,26 @@
                 timestamp: new Date().toISOString()
             };
             db.ref('wanted_list/').push(p);
-            alert("Dodano pomyślnie!");
+            alert("Dodano osobę!");
+        });
+
+        // Dodawanie mediów
+        document.getElementById('addMediaBtn').addEventListener('click', async () => {
+            const file = document.getElementById('mediaFileInput').files[0];
+            if(!file) return alert("Wybierz plik!");
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', UPLOAD_PRESET);
+            
+            const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+            const data = await res.json();
+            
+            db.ref('media_list/').push({
+                url: data.secure_url,
+                timestamp: new Date().toISOString()
+            });
+            alert("Media dodane!");
         });
 
         db.ref('wanted_list/').on('value', snap => {
@@ -78,7 +104,6 @@
                 const div = document.createElement('div');
                 div.className = 'card';
                 div.innerHTML = `<span>${p.name}</span>`;
-                // Przycisk usuwania został usunięty
                 list.appendChild(div);
             });
         }
