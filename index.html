@@ -40,7 +40,7 @@
 
         let allItems = [];
 
-        // DODAWANIE
+        // DODAWANIE Z DATĄ
         document.getElementById('addBtn').addEventListener('click', async () => {
             const file = document.getElementById('fileInput').files[0];
             let imgUrl = "";
@@ -59,7 +59,8 @@
                 phone: document.getElementById('phone').value, 
                 nat: document.getElementById('nat').value, 
                 desc: document.getElementById('desc').value,
-                img: imgUrl 
+                img: imgUrl,
+                timestamp: new Date().toISOString() // Zapisuje aktualną datę i czas
             };
             db.ref('wanted_list/').push(p);
             alert("Dodano pomyślnie!");
@@ -72,7 +73,7 @@
             render(allItems);
         });
 
-        // RENDEROWANIE Z NAPRAWIONYM USUWANIEM
+        // RENDEROWANIE
         function render(data) {
             const list = document.getElementById('list');
             list.innerHTML = '';
