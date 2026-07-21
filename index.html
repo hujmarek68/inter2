@@ -2,116 +2,657 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>GENERATOR // ADMIN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INTERPOLWH // ULTRA TACTICAL ADMIN TERMINAL</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
     <style>
-        body { font-family: Arial; padding: 20px; background: #eee; }
-        .box { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-        input, textarea { width: 100%; padding: 10px; margin: 5px 0; box-sizing: border-box; }
-        button { background: #003366; color: white; padding: 10px; cursor: pointer; border: none; width: 100%; margin-top: 10px; }
-        .card { background: white; padding: 10px; margin-top: 5px; border-bottom: 1px solid #ccc; }
+        :root {
+            --bg-darkest: #08090d;
+            --bg-panel: rgba(18, 22, 30, 0.9);
+            --bg-card: rgba(22, 28, 38, 0.95);
+            --border-tactical: #2d3648;
+            --accent-orange: #ff5500;
+            --accent-glow: rgba(255, 85, 0, 0.4);
+            --accent-green: #00ff66;
+            --text-main: #e2e8f0;
+            --text-muted: #718096;
+            --font-title: 'Chakra Petch', sans-serif;
+            --font-mono: 'IBM Plex Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font-mono);
+            background-color: var(--bg-darkest);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+            font-size: 14px;
+        }
+
+        /* ANIMOWANE TŁO CANVAS */
+        #bgCanvas {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        /* NAKŁADKA SKANERA (SCANLINES) */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.3) 50%), 
+                        linear-gradient(90deg, rgba(255, 85, 0, 0.02), rgba(0, 255, 102, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 4px, 6px 100%;
+            z-index: 999;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+
+        /* GÓRNY PASEK SYSTEMOWY */
+        .top-sub-header {
+            background: #040507;
+            border-bottom: 1px solid var(--border-tactical);
+            padding: 6px 3%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* HEADER */
+        header {
+            background: var(--bg-panel);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--border-tactical);
+            padding: 12px 3%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid var(--border-tactical);
+            padding: 8px 16px;
+            border-radius: 4px;
+        }
+        .logo-area img { 
+            height: 38px; 
+            filter: drop-shadow(0 0 8px var(--accent-orange));
+            animation: logoPulse 2s infinite alternate;
+        }
+        @keyframes logoPulse {
+            0% { filter: drop-shadow(0 0 4px var(--accent-orange)); }
+            100% { filter: drop-shadow(0 0 12px var(--accent-orange)); }
+        }
+
+        .logo-title-box h1 {
+            font-family: var(--font-title);
+            font-size: 22px;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+        .logo-title-box span {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        .system-log-box {
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--border-tactical);
+            padding: 8px 16px;
+            font-size: 11px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+        .system-log-box .log-auth {
+            color: var(--accent-green);
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .system-log-box .log-auth::after {
+            content: '';
+            width: 7px; height: 7px;
+            background: var(--accent-orange);
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 0 10px var(--accent-orange);
+            animation: blink 1s infinite;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+        /* LIVE TICKER */
+        .live-feed-ticker {
+            background: #000;
+            border-bottom: 1px solid var(--border-tactical);
+            padding: 6px 3%;
+            font-size: 11px;
+            color: var(--accent-orange);
+            display: flex;
+            gap: 15px;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+        .ticker-content {
+            animation: tickerScroll 25s linear infinite;
+        }
+        @keyframes tickerScroll {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* WORKSPACE */
+        .workspace {
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            padding: 24px 3%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .hud-panel {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-tactical);
+            padding: 24px;
+            border-radius: 4px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            position: relative;
+        }
+        .hud-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 3px; height: 100%;
+            background: var(--accent-orange);
+        }
+
+        .hud-panel h2 {
+            font-family: var(--font-title);
+            font-size: 18px;
+            color: #fff;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* FORMULARZE */
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .form-group.full {
+            grid-column: span 2;
+        }
+
+        label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 14px 16px;
+            background: rgba(8, 9, 13, 0.8);
+            border: 1px solid var(--border-tactical);
+            color: #fff;
+            font-family: var(--font-mono);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input:focus, textarea:focus {
+            border-color: var(--accent-orange);
+            box-shadow: 0 0 20px var(--accent-glow), inset 0 0 10px var(--accent-glow);
+        }
+        textarea { resize: vertical; min-height: 90px; }
+
+        input[type="file"] {
+            padding: 10px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        input[type="file"]::file-selector-button {
+            background: var(--bg-panel);
+            border: 1px solid var(--border-tactical);
+            color: #fff;
+            padding: 6px 12px;
+            font-family: var(--font-mono);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        input[type="file"]::file-selector-button:hover {
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+
+        button.tactical-btn {
+            font-family: var(--font-title);
+            background: var(--accent-orange);
+            border: 1px solid var(--accent-orange);
+            color: #fff;
+            padding: 14px 20px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 0 15px var(--accent-glow);
+            margin-top: 10px;
+        }
+        button.tactical-btn:hover {
+            background: #ff6a1f;
+            box-shadow: 0 0 25px var(--accent-orange);
+            transform: translateY(-2px);
+        }
+        button.tactical-btn:active { transform: translateY(0); }
+
+        /* LISTA ZARZĄDZANIA */
+        .card-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+
+        .manage-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-tactical);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+            transition: border-color 0.2s;
+        }
+        .manage-card:hover {
+            border-color: var(--accent-orange);
+        }
+
+        .manage-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .manage-thumb {
+            width: 45px; height: 45px;
+            background: #000;
+            border: 1px solid var(--border-tactical);
+            object-fit: cover;
+        }
+        .manage-details h4 {
+            font-family: var(--font-title);
+            font-size: 15px;
+            color: #fff;
+        }
+        .manage-details span {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* NOTIFICATION BOX */
+        #notification {
+            position: fixed;
+            bottom: 25px; right: 25px;
+            background: var(--bg-panel);
+            border: 1px solid var(--accent-orange);
+            padding: 14px 22px;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 0 25px var(--accent-glow);
+            z-index: 1000;
+            display: none;
+            animation: cyberIn 0.3s ease forwards;
+        }
+        @keyframes cyberIn {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media(max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .form-group.full { grid-column: span 1; }
+        }
     </style>
 </head>
 <body>
-    <div class="box">
-        <h2>DODAJ OSOBĘ</h2>
-        <input type="text" id="name" placeholder="Imię i Nazwisko">
-        <input type="text" id="phone" placeholder="Telefon">
-        <input type="text" id="nat" placeholder="Narodowość">
-        <textarea id="desc" placeholder="Opis"></textarea>
-        <input type="file" id="fileInput">
-        <button id="addBtn">DODAJ DO BAZY</button>
+
+<div class="scanlines"></div>
+<canvas id="bgCanvas"></canvas>
+
+<div class="top-sub-header">
+    <span>PHOTERALIS TINSBASE // ADMIN COMMAND NODE 8492</span>
+    <span>RESTRICTED ACCESS // LEVEL 5 CLEARANCE</span>
+</div>
+
+<header>
+    <div class="logo-area">
+        <img src="https://i.imgur.com/yPRkbqB.png" alt="Interpol Logo">
+        <div class="logo-title-box">
+            <h1>INTERPOLWH</h1>
+            <span>[ADMIN TERMINAL] GOD MODE ACTIVE</span>
+        </div>
+    </div>
+    <div class="system-log-box">
+        <span class="log-auth">ADMIN SESSION: SECURE</span>
+        <span style="color:var(--text-muted)">USER: WH | ACCESS: ROOT</span>
+    </div>
+</header>
+
+<div class="live-feed-ticker">
+    <span style="color:#fff">[ADMIN TERMINAL ACTIVE]</span>
+    <div class="ticker-content">
+        DATABASE DISPATCH SYSTEM READY // CLOUDINARY CLOUD SYNC ACTIVE // LIKWIDUJEMY DZIECI NA WHATSAPIE // WAŻNE: ZACHOWAJ OSTROŻNOŚĆ PRZY EDYCJI //
+    </div>
+</div>
+
+<div class="workspace">
+    <div class="hud-panel">
+        <h2>[+] Dodaj Nową Osobę do Bazy</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Imię i Nazwisko</label>
+                <input type="text" id="name" placeholder="np. John Doe">
+            </div>
+            <div class="form-group">
+                <label>Telefon / Kontakt</label>
+                <input type="text" id="phone" placeholder="np. +48 000 000 000">
+            </div>
+            <div class="form-group">
+                <label>Narodowość</label>
+                <input type="text" id="nat" placeholder="np. PL / US">
+            </div>
+            <div class="form-group">
+                <label>Zdjęcie Profilowe</label>
+                <input type="file" id="fileInput">
+            </div>
+            <div class="form-group full">
+                <label>Opis / Profil Operacyjny</label>
+                <textarea id="desc" placeholder="Wprowadź szczegółowe informacje operacyjne..."></textarea>
+            </div>
+        </div>
+        <button id="addBtn" class="tactical-btn">DODAJ DO BAZY DANYCH</button>
     </div>
 
-    <div class="box">
-        <h2>DODAJ MEDIA</h2>
-        <input type="file" id="mediaFileInput">
-        <button id="addMediaBtn">DODAJ MEDIA</button>
+    <div class="hud-panel">
+        <h2>[+] Dodaj Materiały do Galerii Mediów</h2>
+        <div class="form-group full" style="margin-bottom: 10px;">
+            <label>Plik Graficzny / Wideo</label>
+            <input type="file" id="mediaFileInput">
+        </div>
+        <button id="addMediaBtn" class="tactical-btn">WYŚLIJ DO ARCHIWUM MEDIALNEGO</button>
     </div>
 
-    <div class="box">
-        <h2>ZARZĄDZAJ WPISAMI</h2>
-        <input type="text" id="search" placeholder="Szukaj po imieniu..." onkeyup="filter()">
-        <div id="list"></div>
+    <div class="hud-panel">
+        <h2>
+            <span>Zarządzanie Rekordami Bazy</span>
+            <span id="recordCount" style="font-size:12px; color:var(--text-muted);">[Ładowanie...]</span>
+        </h2>
+        <div class="form-group full" style="margin-bottom: 15px;">
+            <input type="text" id="search" placeholder="[ Q WYSZUKAJ W BAZIE... ]" onkeyup="filterList()">
+        </div>
+        <div id="list" class="card-list">
+            </div>
     </div>
+</div>
 
-    <script>
-        const firebaseConfig = { apiKey: "AIzaSyAjzPmXerW0lmE9qRlK_POAGzYpAZ1F5UM", authDomain: "iner-55140.firebaseapp.com", databaseURL: "https://iner-55140-default-rtdb.firebaseio.com", projectId: "iner-55140", storageBucket: "iner-55140.firebasestorage.app", messagingSenderId: "299092984115", appId: "1:299092984115:web:a114c8dcb6ce11e8effe46" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+<div id="notification"></div>
 
-        const CLOUD_NAME = "drqvrxtlz";
-        const UPLOAD_PRESET = "interpol";
+<script>
+    /* ANIMOWANE TŁO CANVAS (PARTICLE MESH) */
+    const canvas = document.getElementById('bgCanvas');
+    const ctx = canvas.getContext('2d');
 
-        let allItems = [];
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
 
-        // Dodawanie osoby
-        document.getElementById('addBtn').addEventListener('click', async () => {
-            const file = document.getElementById('fileInput').files[0];
-            let imgUrl = "";
+    const particles = [];
+    const count = 40;
 
-            if(file) {
-                const formData = new FormData();
-                formData.append('file', file);
-                formData.append('upload_preset', UPLOAD_PRESET);
-                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
-                const data = await res.json();
-                imgUrl = data.secure_url;
-            }
-
-            const p = { 
-                name: document.getElementById('name').value, 
-                phone: document.getElementById('phone').value, 
-                nat: document.getElementById('nat').value, 
-                desc: document.getElementById('desc').value,
-                img: imgUrl,
-                timestamp: new Date().toISOString()
-            };
-            db.ref('wanted_list/').push(p);
-            alert("Dodano osobę!");
+    for (let i = 0; i < count; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.6,
+            size: Math.random() * 2 + 1
         });
+    }
 
-        // Dodawanie mediów
-        document.getElementById('addMediaBtn').addEventListener('click', async () => {
-            const file = document.getElementById('mediaFileInput').files[0];
-            if(!file) return alert("Wybierz plik!");
+    function drawBg() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#ff5500';
+        ctx.strokeStyle = 'rgba(255, 85, 0, 0.08)';
 
+        for (let i = 0; i < count; i++) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+
+            if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+            if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+            ctx.fill();
+
+            for (let j = i + 1; j < count; j++) {
+                let p2 = particles[j];
+                let dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+                if (dist < 140) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                }
+            }
+        }
+        requestAnimationFrame(drawBg);
+    }
+    drawBg();
+
+    /* NOTIFIKATOR TAKTYCZNY */
+    function showNotification(text) {
+        const notif = document.getElementById('notification');
+        notif.innerText = text;
+        notif.style.display = 'block';
+        setTimeout(() => { notif.style.display = 'none'; }, 3500);
+    }
+
+    /* FIREBASE & CLOUDINARY CONFIG */
+    const firebaseConfig = { 
+        apiKey: "AIzaSyAjzPmXerW0lmE9qRlK_POAGzYpAZ1F5UM", 
+        authDomain: "iner-55140.firebaseapp.com", 
+        databaseURL: "https://iner-55140-default-rtdb.firebaseio.com", 
+        projectId: "iner-55140", 
+        storageBucket: "iner-55140.firebasestorage.app", 
+        messagingSenderId: "299092984115", 
+        appId: "1:299092984115:web:a114c8dcb6ce11e8effe46" 
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const CLOUD_NAME = "drqvrxtlz";
+    const UPLOAD_PRESET = "interpol";
+
+    let allItems = [];
+
+    /* DODawanie osoby */
+    document.getElementById('addBtn').addEventListener('click', async () => {
+        const file = document.getElementById('fileInput').files[0];
+        const name = document.getElementById('name').value;
+        
+        if(!name) {
+            showNotification("[-] BŁĄD: Podaj imię i nazwisko!");
+            return;
+        }
+
+        showNotification("[*] PRZESYŁANIE PLIKU DO CLOUDINARY...");
+        let imgUrl = "";
+
+        if(file) {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', UPLOAD_PRESET);
-            
+            try {
+                const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
+                const data = await res.json();
+                imgUrl = data.secure_url;
+            } catch(e) {
+                showNotification("[-] BŁĄD UPLOADU ZDJĘCIA!");
+                return;
+            }
+        }
+
+        const p = { 
+            name: name, 
+            phone: document.getElementById('phone').value, 
+            nat: document.getElementById('nat').value, 
+            desc: document.getElementById('desc').value,
+            img: imgUrl,
+            timestamp: new Date().toISOString()
+        };
+
+        db.ref('wanted_list/').push(p, (error) => {
+            if (error) {
+                showNotification("[-] BŁĄD ZAPISU DO BAZY!");
+            } else {
+                showNotification("[+] SUKCES: OSOBA DODANA DO BAZY!");
+                document.getElementById('name').value = '';
+                document.getElementById('phone').value = '';
+                document.getElementById('nat').value = '';
+                document.getElementById('desc').value = '';
+                document.getElementById('fileInput').value = '';
+            }
+        });
+    });
+
+    /* DODawanie mediów */
+    document.getElementById('addMediaBtn').addEventListener('click', async () => {
+        const file = document.getElementById('mediaFileInput').files[0];
+        if(!file) {
+            showNotification("[-] BŁĄD: Wybierz plik mediów!");
+            return;
+        }
+
+        showNotification("[*] PRZESYŁANIE MEDIÓW...");
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', UPLOAD_PRESET);
+        
+        try {
             const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, { method: 'POST', body: formData });
             const data = await res.json();
             
             db.ref('media_list/').push({
                 url: data.secure_url,
                 timestamp: new Date().toISOString()
+            }, (error) => {
+                if(error) {
+                    showNotification("[-] BŁĄD ZAPISU MEDIÓW!");
+                } else {
+                    showNotification("[+] SUKCES: MEDIA DODANE DO ARCHIWUM!");
+                    document.getElementById('mediaFileInput').value = '';
+                }
             });
-            alert("Media dodane!");
-        });
+        } catch(e) {
+            showNotification("[-] BŁĄD SIECI PODCZAS UPLOADU MEDIÓW!");
+        }
+    });
 
-        db.ref('wanted_list/').on('value', snap => {
-            allItems = [];
-            snap.forEach(c => allItems.push({ ...c.val(), id: c.key }));
-            render(allItems);
-        });
+    /* NASŁUCHIWANIE BAZY */
+    db.ref('wanted_list/').on('value', snap => {
+        allItems = [];
+        snap.forEach(c => allItems.push({ ...c.val(), id: c.key }));
+        allItems.sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0));
+        document.getElementById('recordCount').innerText = `[REKORDÓW: ${allItems.length}]`;
+        render(allItems);
+    });
 
-        function render(data) {
-            const list = document.getElementById('list');
-            list.innerHTML = '';
-            data.forEach(p => {
-                const div = document.createElement('div');
-                div.className = 'card';
-                div.innerHTML = `<span>${p.name}</span>`;
-                list.appendChild(div);
-            });
+    function render(data) {
+        const list = document.getElementById('list');
+        list.innerHTML = '';
+        
+        if(data.length === 0) {
+            list.innerHTML = '<p style="text-align:center; color: var(--text-muted); padding: 20px;">Brak rekordów w systemie.</p>';
+            return;
         }
 
-        function filter() {
-            const q = document.getElementById('search').value.toLowerCase();
-            render(allItems.filter(i => (i.name || "").toLowerCase().includes(q)));
-        }
-    </script>
+        data.forEach(p => {
+            const div = document.createElement('div');
+            div.className = 'manage-card';
+            const imgSource = p.img || 'https://i.imgur.com/yPRkbqB.png';
+            div.innerHTML = `
+                <div class="manage-info">
+                    <img src="${imgSource}" class="manage-thumb" onerror="this.src='https://i.imgur.com/yPRkbqB.png'">
+                    <div class="manage-details">
+                        <h4>${p.name || 'Brak imienia'}</h4>
+                        <span>NAT: ${p.nat || 'N/A'} | TEL: ${p.phone || 'Brak'}</span>
+                    </div>
+                </div>
+                <span style="font-size:11px; color:var(--text-muted); font-weight:700;">[ZABEZPIECZONE]</span>
+            `;
+            list.appendChild(div);
+        });
+    }
+
+    function filterList() {
+        const q = document.getElementById('search').value.toLowerCase();
+        const filtered = allItems.filter(i => 
+            (i.name || "").toLowerCase().includes(q) || 
+            (i.nat || "").toLowerCase().includes(q)
+        );
+        render(filtered);
+    }
+</script>
 </body>
 </html>
